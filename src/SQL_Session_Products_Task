@@ -1,0 +1,168 @@
+-- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+--1. Баардык продукталарды(Products) жана информацияларды чыгар.
+select * from products join product_info on products.id = product_info.product_id;
+
+--2. Информациясы бар болгон продукталарды гана чыгар.
+select * from products where id=(select product_id from product_info where product_id=products.id);
+
+--3. Информациясы жок(null) болгон продукталарды чыгар.
+select * from products where id<>(select product_id from product_info where product_id=products.id);
+
+--4. Баардык продукталардын атын жана срогун чыгар.
+select name,(select expiration_date from product_info where products.id=id) from products ;
+
+--5. Баардык продукталарды жана анын мамлекеттери "М" менен башталган шаарларын чыгар.
+select *,(select country from product_info where country like 'M%' and product_info.product_id=products.id)
+from products where id=(select product_id from product_info where country like 'M%' and product_info.product_id=products.id);
+
+--6. Баардык кардардын(Customers) аттарын жана кардарга тийешелуу карзинанын(Basket_терин) аттарын сорттоп чыгар.(asc,desc)
+select first_name,(select basket_name from basket where basket.id=customers.id) from customers order by first_name;
+select first_name,(select basket_name from basket where basket.id=customers.id) from customers order by first_name desc;
+
+--7. Кардардын аты жана кардардын продуктулары чыксын.
+select first_name,* from customers join products on products.id=customers.id;
+select first_name,(select * from products where id=(select product_id from product_basket where basket_id=(select id from basket where customer_id=(select id from customers where customers.id=basket_id)))) from customers;
+
+--8. Кардардын аты, кардар алган продуктун аты, баасы, салмагы чыксын.
+select first_name, (select name from products where products.id=customers.id),(select price from products where products.id=customers.id),(select weight from products where products.id=customers.id) from customers;
+
+--9. Бир кардар эки окшош продукт алган болсо, кардардын аты,
+--                                     кардар алган продукталарынын аты уникалдуу болуп баасы жана салмагы кошулуп чыгар.
+select first_name,(select distinct name,price,weight from products where customers.id=products.id) from customers;
+
+--10.Бир өлкөдө чыккан продукталдын баарын чыгар.
+select * from products where id=(select id from product_info where products.id=product_info.id);
+
+--11.Кардарлардын баарын жана алган продукталарынын баасынын суммасын тегеректеп (округлить) чыгар.
+select *,(select round(sum(price)) from products where customers.id=products.id) from customers;
+
+--12."2021" ден "2023" кө чейинки сроктогу продукталардын атын жана срокторун чыгар.
+select name,(select expiration_date from product_info where products.id=product_info.id and expiration_date between date'2021-1-1' and date'2023-1-1')
+from products where id=(select id from product_info where products.id=product_info.id and expiration_date between date'2021-1-1' and date'2023-1-1');
+
+select name,(select expiration_date from product_info where products.id=product_info.id)
+from products where id=(select id from product_info where products.id=product_info.id and expiration_date between date'2021-1-1' and date'2023-1-1');
+
+--13.Срогу "2022" болгон продукталардын шаарын , продукталардын атын жана баасын чыгар бирок баалары 0 болуп калсын.
+select (select expiration_date from product_info where products.id=product_info.id and expiration_date between date'2022-1-1' and date'2022-12-31'),
+name,price-products.price from products where products.id=(select id from product_info where products.id=product_info.id and expiration_date between date'2022-1-1' and date'2022-12-31');
+
+--14.Баардык кардарлардын продукталарынын сумассын чыгар.
+select sum((select sum(price) from products where customers.id=products.id)) from customers;
+
+--15.Кардардын аты жана ал сатып алган продуктунун аты, тусу чыксын.
+select first_name,(select name from products where customers.id=products.id),(select (select colour from product_info where
+products.id=product_info.product_id) from products where customers.id=products.id) from customers;
+
+--16.Баардык продуктулардын салмактарын чыгар.
+select weight from products;
+
+--17.Кардарлардын email_дары "com" менен буткон кардарлардын аттары, корзинасынын аты чыксын.
+select first_name,(select basket_name from basket where customer_id=customers.id) from customers where email like '%com';
+
+--18.Продуклардын атын, кыскача маалыматын(description), кардардын атын чыгар качан кардарлардын номери жок(null) болсо.
+select name,description,(select first_name from customers where products.id=customers.id) from products where id=(select id from customers where phone_number=null);
+
+--19.Бардык продуктунун тустору жана тустору окшош продукталары чыксын.
+select colour,(select name from products where products.id=product_info.id)from product_info;
+
+--20.Баардык продукталардын мамлекти окшош болгон продукталардын атын жана анын кардарларын атын чыгар.
+select name,(select first_name from customers where products.id=customers.id) from products;
+
+--<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+create table products(
+                         id serial primary key ,
+                         name varchar(50),
+                         description text,
+                         price float,
+                         weight float
+);
+
+create table customers(
+                          id serial primary key ,
+                          first_name varchar(50),
+                          last_name varchar(50),
+                          email varchar unique ,
+                          phone_number varchar(13)
+);
+
+create table basket(
+                       id serial primary key ,
+                       basket_name varchar(20),
+                       customer_id int references customers(id)
+);
+
+create table product_basket(
+                               id serial primary key ,
+                               basket_id int references basket(id),
+                               product_id int references products(id)
+);
+
+create table product_info(
+                             id serial primary key ,
+                             expiration_date date,
+                             country varchar,
+                             colour varchar,
+                             product_id int references products(id)
+);
+
+insert into customers(first_name, last_name, email, phone_number)
+VALUES ('Aibek','Alisher uulu','aibek@gmail.com','+996700707070'),
+       ('Bakyt','Kurbanov','bakyt@gmail.com','+996500707070'),
+       ('Guljigit','Satybaldy uulu','guljigit@gmail.com','+996200707070'),
+       ('Daiyrbek','Moldobasanov','danik@gmail.com','+996900707070'),
+       ('Erzat','Egemberdiev','erzat@gmail.com','+996770707070'),
+       ('Fatima','Alibek kyzy','fatima@gmail.com','+996707707070'),
+       ('Nurkyz','Myktarova','nurkyz@gmail.com','+996777707070'),
+       ('Begimai','Uzakbai kyzy','begimai@gmail.com','+996555050505'),
+       ('Bekmurat','Uzakbai uulu','beka@gmail.com','+996777171717'),
+       ('Aijan','Manasova','aijan@gmail.com','+996700000000');
+
+insert into products(name, description, price, weight)
+VALUES ('Milk','Cows milk',45,0.5),
+       ('Bread','Tandyrs bread',25,0.2),
+       ('Egg','Simple egg',10,0.123),
+       ('Water','Mineral water',40,1),
+       ('Shoro','Kefir water',45,0.5),
+       ('Sausage','Halal sausage',150,0.6),
+       ('Kefir','Cows kefir',45,0.5),
+       ('Carrot','Batkens carrot',36,1),
+       ('Potatoes','Naryns potatoes',28,1),
+       ('Onion','Oshs onion',30,1),
+       ('Sandwich','Toiboses sandwich',56,0.3),
+       ('IceCream','With chocolate',20,0.12);
+
+insert into basket(basket_name, customer_id)
+VALUES ('Basket01',1),
+       ('Basket02',2),
+       ('Basket03',3),
+       ('Basket04',4),
+       ('Basket05',5),
+       ('Basket06',6),
+       ('Basket07',7),
+       ('Basket08',8);
+
+
+insert into product_basket(basket_id, product_id)
+VALUES (1,1),
+       (2,2),
+       (3,3),
+       (4,4),
+       (5,5),
+       (6,6),
+       (7,7),
+       (8,8);
+
+insert into product_info(expiration_date, country, colour, product_id)
+VALUES (date '2023-1-11','Kyrgyzstan','White',1),
+       (date '2023-1-12','Kyrgyzstan','Gray',2),
+       (date '2023-1-9','Kyrgyzstan','White',3),
+       (date '2023-1-1','Kyrgyzstan','White',4),
+       (date '2023-1-3','Kyrgyzstan','White',5),
+       (date '2023-1-7','Kyrgyzstan','White',6),
+       (date '2023-1-10','Kyrgyzstan','Red',7),
+       (date '2022-12-11','Kyrgyzstan','White',8),
+       (date '2022-12-21','Kyrgyzstan','Red',9),
+       (date '2023-1-2','Kyrgyzstan','Yellow',10),
+       (date '2023-1-10','Kyrgyzstan','Brown',11),
+       (date '2022-12-20','Russia','White',12);
